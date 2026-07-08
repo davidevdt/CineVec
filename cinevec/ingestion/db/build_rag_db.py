@@ -1,7 +1,7 @@
 import os 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
-from cinevec.db.model_rag import Base
+from cinevec.ingestion.db.model_rag import Base
 from cinevec.logging import logger
 from dotenv import load_dotenv
 

@@ -15,7 +15,7 @@ import sys
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
-from cinevec.db.build_rag_db import get_engine
+from cinevec.ingestion.db.build_rag_db import get_engine
 
 
 # ---------------------------------------------------------------- helpers

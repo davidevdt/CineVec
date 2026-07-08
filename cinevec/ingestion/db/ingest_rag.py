@@ -4,18 +4,20 @@ Build the movie database from the TMDB-style dataframe.
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
-from cinevec.db.model_rag import Movie
+from cinevec.ingestion.db.model_rag import Movie
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from cinevec.logging import logger
-from cinevec.embed import embedder
+from cinevec.ingestion.embed import get_embedder
+from box import ConfigBox
 
 BATCH = 256 # embedding batch size 
 
 
-def ingest(engine: Engine, movies: list[dict]) -> bool:
+def ingest(engine: Engine, movies: list[dict], config: ConfigBox) -> bool:
     """Ingest movies incrementally: rows whose id already exists are
     skipped (and never embedded). Safe to re-run."""
+    embedder = get_embedder(config)
     try:
         # 1. Which movies are already there? Skip them before embedding.
         with Session(engine) as session:

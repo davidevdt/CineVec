@@ -7,7 +7,7 @@ import numpy as np
 from typing import Optional
 from box import ConfigBox
 
-from cinevec.utils.file_utils import path_exists, create_path, load_config_file
+from cinevec.utils.file_utils import path_exists, create_path
 from cinevec.logging import logger
 
 
@@ -62,12 +62,11 @@ def store_df(df: pd.DataFrame, path: str) -> None:
 
 
 
-def load_and_store_data(sample_n: Optional[int] = None) -> pd.DataFrame:
+def load_and_store_data(config: ConfigBox, sample_n: Optional[int] = None) -> pd.DataFrame:
     """
     Load the TMDB-style dataset, clean it, and store it to a CSV file.
     If the cleaned data file already exists, load it instead of downloading and cleaning again.
     """
-    config = load_config_file()
     output_path = config.data_df_path
 
     if path_exists(output_path):
