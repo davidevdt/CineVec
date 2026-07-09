@@ -13,6 +13,7 @@ dependencies = [
     "pandas>=3.0.3",
     "pgvector>=0.4.2",
     "psycopg[binary]>=3.3.4",
+    "pydantic-ai>=2.7.0",
     "python-box>=7.4.1",
     "python-dotenv>=1.2.2",
     "seaborn>=0.13.2",

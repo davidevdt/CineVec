@@ -2,5 +2,8 @@ data-url: "https://huggingface.co/datasets/jason1966/ahsanaseer_top-rated-tmdb-m
 data-df-path: "./data/top10K-TMDB-movies.csv"
 embedding-model: "Xenova/all-MiniLM-L6-v2"
 embedding-model-dir: "models"
+agent-max-results: 5
+hybrid-search-n-candidates: 30
+rrf-k: 60
 
 
