@@ -21,8 +21,10 @@ def _load_cost_rates() -> tuple[float, float]:
     """
     try:
         monitoring = load_config_file().monitoring
-        return (float(monitoring.input_cost_per_million),
-                float(monitoring.output_cost_per_million))
+        return (
+            float(monitoring.input_cost_per_million),
+            float(monitoring.output_cost_per_million),
+        )
     except Exception:
         logger.warning("No monitoring cost rates in config; using defaults.")
         return DEFAULT_INPUT_COST_PER_MILLION, DEFAULT_OUTPUT_COST_PER_MILLION
@@ -47,8 +49,9 @@ class ConversationRecord:
 
 
 def compute_cost(input_tokens: int, output_tokens: int) -> float:
-    return (input_tokens / 1_000_000) * INPUT_COST_PER_MILLION + \
-           (output_tokens / 1_000_000) * OUTPUT_COST_PER_MILLION
+    return (input_tokens / 1_000_000) * INPUT_COST_PER_MILLION + (
+        output_tokens / 1_000_000
+    ) * OUTPUT_COST_PER_MILLION
 
 
 def extract_tools_used(result) -> list[str]:
@@ -66,13 +69,16 @@ def extract_tools_used(result) -> list[str]:
                 mode = part.args_as_dict().get("mode")
             except Exception:
                 mode = None
-            labels.append(f"{part.tool_name}:{mode}" if mode else part.tool_name)
+            labels.append(
+                f"{part.tool_name}:{mode}" if mode else part.tool_name
+            )
     return labels
 
 
-def build_record(question: str, result, model: str,
-                 response_time: float) -> ConversationRecord:
-    usage = result.usage   # a property, not a method
+def build_record(
+    question: str, result, model: str, response_time: float
+) -> ConversationRecord:
+    usage = result.usage  # a property, not a method
     tools = extract_tools_used(result)
     input_tokens = usage.input_tokens or 0
     output_tokens = usage.output_tokens or 0

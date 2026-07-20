@@ -2,13 +2,9 @@
 db_test.py — test queries against the CineVec database.
 """
 
-import sys
-
-from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from cinevec.logging import logger
-from cinevec.ingestion.db.build_rag_db import get_engine
 
 
 # ---------------------------------------------------------------- helpers
@@ -22,5 +18,3 @@ def query_db(engine, sql: str) -> None:
                 logger.info(f"  {dict(r)}")
         else:
             logger.info(f"-- OK ({result.rowcount} row(s) affected)")
-
-

@@ -220,3 +220,5 @@ __marimo__/
 
 # Embedding model files 
 models/
+# Claude Code local settings
+.claude/

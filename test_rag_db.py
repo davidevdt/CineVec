@@ -10,10 +10,7 @@ Edit the QUERIES section at the bottom to taste — this file is meant to be
 a scratchpad, not production code.
 """
 
-import sys
-
-from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from cinevec.ingestion.db.build_rag_db import get_engine
 
@@ -37,4 +34,3 @@ if __name__ == "__main__":
 
     query = "SELECT * FROM movies LIMIT 5"
     raw_sql(engine, query)
-

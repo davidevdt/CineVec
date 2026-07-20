@@ -1,8 +1,10 @@
+import logging
 import os
 import shutil
-import logging
 from pathlib import Path
+
 from huggingface_hub import hf_hub_download, list_repo_files
+
 from cinevec.logging import logger
 
 os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
@@ -13,6 +15,7 @@ ONNX_CANDIDATES = [
     "onnx/encoder_model.onnx",
     "model.onnx",
 ]
+
 
 def download_embedding_model(repo, dest="models"):
     dest = Path(dest) / repo
@@ -44,4 +47,3 @@ def download_embedding_model(repo, dest="models"):
             logger.info(f"  saved {dst}")
         else:
             logger.info(f"  exists {dst}")
-

@@ -35,9 +35,11 @@ class Conversation(MonitoringBase):
     # {get_movie_details,search_movies:hybrid}. The mode suffix matters: it says
     # whether the vector index is actually being used.
     tool_calls: Mapped[int] = mapped_column(Integer, default=0)
-    tools_used: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
+    tools_used: Mapped[list[str] | None] = mapped_column(
+        ARRAY(Text), nullable=True
+    )
 
-    response_time: Mapped[float] = mapped_column(Float)   # seconds
+    response_time: Mapped[float] = mapped_column(Float)  # seconds
     cost: Mapped[float] = mapped_column(Float, default=0.0)  # USD
 
     # timezone=True -> TIMESTAMPTZ, which Grafana's $__timeFilter() needs to

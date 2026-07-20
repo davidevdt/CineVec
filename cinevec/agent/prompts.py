@@ -1,4 +1,4 @@
-SYSTEM_PROMPT = f"""\
+SYSTEM_PROMPT = """\
 You are a movie recommendation assistant backed by a PostgreSQL movie database
 (TMDB data: title, year, genres, original language, rating 0-10, vote count,
 plot). The database contains NO cast or crew information — if asked about a

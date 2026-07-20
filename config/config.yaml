@@ -1,13 +1,21 @@
 data-url: "https://huggingface.co/datasets/jason1966/ahsanaseer_top-rated-tmdb-movies-10k/raw/main/top10K-TMDB-movies.csv"
 data-df-path: "./data/top10K-TMDB-movies.csv"
+# Synthetic questions used by notebooks/retrieval_tuning.ipynb
+ground-truth-path: "./data/ground-truth-retrieval.csv"
 embedding-model: "Xenova/all-MiniLM-L6-v2"
 embedding-model-dir: "models"
 agent-max-results: 5
-text_search_title_weight: 1.0
-text_search_plot_weight: 0.4
-text_search_genres_weight: 0.2
-hybrid-search-n-candidates: 30
-rrf-k: 60
+# Tuned in notebooks/retrieval_tuning.ipynb over 2307 generated queries.
+# hit@5 0.355 -> 0.522 (95% CI on the gain [+13.5, +16.8] points).
+# The plot carries the signal; the title barely matters when the query does not
+# name the film. n-candidates made no measurable difference between 20 and 100.
+text-search-title-weight: 0.2
+text-search-plot-weight: 1.0
+text-search-genres-weight: 0.6
+hybrid-search-n-candidates: 50
+rrf-k: 5
+# all | any | fallback  (see TEXT_MODES in cinevec/agent/search.py)
+hybrid-text-mode: "fallback"
 
 # USD per 1M tokens. Defaults are gpt-5.4-mini list price; update if
 # MOVIE_AGENT_MODEL changes.

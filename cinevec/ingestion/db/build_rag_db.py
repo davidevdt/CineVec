@@ -1,12 +1,13 @@
-import os 
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+
 from cinevec.ingestion.db.model_rag import Base
 from cinevec.logging import logger
-from dotenv import load_dotenv
 
-
-load_dotenv() 
+load_dotenv()
 user = os.getenv("POSTGRES_USER")
 password = os.getenv("POSTGRES_PASSWORD")
 host = os.getenv("POSTGRES_HOST")
@@ -19,11 +20,13 @@ def get_engine(dsn: str = DSN) -> Engine:
     engine = create_engine(dsn)
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        conn.execute(text(
-            "CREATE OR REPLACE FUNCTION imm_array_to_string(text[]) "
-            "RETURNS text LANGUAGE sql IMMUTABLE AS "
-            "$$ SELECT coalesce(array_to_string($1, ' '), '') $$"
-        ))
+        conn.execute(
+            text(
+                "CREATE OR REPLACE FUNCTION imm_array_to_string(text[]) "
+                "RETURNS text LANGUAGE sql IMMUTABLE AS "
+                "$$ SELECT coalesce(array_to_string($1, ' '), '') $$"
+            )
+        )
     return engine
 
 
@@ -37,7 +40,7 @@ def create_schema(engine: Engine, rebuild: bool = False) -> None:
     logger.info("Database schema created successfully.")
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     engine = get_engine()
     logger.info("Creating schema...")
     create_schema(engine)

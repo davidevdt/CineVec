@@ -36,8 +36,8 @@ def save_conversation(engine: Engine, record: ConversationRecord) -> int:
             cost=record.cost,
         )
         s.add(row)
-        s.flush()          # INSERT ... RETURNING id
-        new_id = row.id    # read before commit expires the attribute
+        s.flush()  # INSERT ... RETURNING id
+        new_id = row.id  # read before commit expires the attribute
         s.commit()
         return new_id
 

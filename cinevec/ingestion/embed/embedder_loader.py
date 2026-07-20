@@ -1,7 +1,8 @@
+from box import ConfigBox
+
 from cinevec.ingestion.embed.download import download_embedding_model
 from cinevec.ingestion.embed.embedder import Embedder
 from cinevec.utils.file_utils import path_exists
-from box import ConfigBox
 
 
 def get_embedder(config: ConfigBox) -> Embedder:

@@ -1,3 +1,3 @@
-from cinevec.logging.logger import logger 
+from cinevec.logging.logger import logger
 
 __all__ = ["logger"]

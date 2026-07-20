@@ -1,6 +1,7 @@
-from pathlib import Path 
+from pathlib import Path
+
+import yaml
 from box import ConfigBox
-import yaml 
 
 from cinevec.logging import logger
 
@@ -22,11 +23,11 @@ def create_path(path: str) -> Path:
     """
     Ensure that a given path exists. If it does not exist, create it.
     """
-    p = Path(path) 
+    p = Path(path)
 
-    if p.suffix: 
+    if p.suffix:
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.touch(exist_ok=True) 
+        p.touch(exist_ok=True)
     else:
         p.mkdir(parents=True, exist_ok=True)
 
@@ -37,9 +38,8 @@ def open_yaml_file(path: str) -> ConfigBox:
     """
     Open a YAML file and return its contents as a ConfigBox.
     """
-    import yaml
 
-    with open(path, "r") as f:
+    with open(path) as f:
         data = yaml.safe_load(f)
 
     logger.info(f"Loaded YAML file from {path}")
@@ -47,7 +47,7 @@ def open_yaml_file(path: str) -> ConfigBox:
     return ConfigBox(data)
 
 
-def load_config_file(path: str="config/config.yaml") -> ConfigBox:
+def load_config_file(path: str = "config/config.yaml") -> ConfigBox:
     """
     Load a configuration file (YAML) and return its contents as a ConfigBox.
     """

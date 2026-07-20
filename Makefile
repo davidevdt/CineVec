@@ -29,4 +29,22 @@ reset-monitoring:
 	docker compose exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c \
 	  "TRUNCATE feedback, conversations RESTART IDENTITY;"
 
-.PHONY: up down logs reset-csv grafana monitoring-tail reset-monitoring
+# ---------------------------------------------------------------- code quality
+# ruff does both jobs (check = lint, format = formatter); mypy adds the type
+# checking neither of them does.
+format:
+	uv run ruff format .
+	uv run ruff check . --fix
+
+lint:
+	uv run ruff format --check .
+	uv run ruff check .
+
+typecheck:
+	uv run mypy cinevec app.py
+
+# What CI runs.
+check: lint typecheck
+
+.PHONY: up down logs reset-csv grafana monitoring-tail reset-monitoring \
+        format lint typecheck check

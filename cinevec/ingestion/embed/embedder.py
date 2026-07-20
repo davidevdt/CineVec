@@ -1,7 +1,8 @@
+from pathlib import Path
+
 import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
-from pathlib import Path
 
 
 class Embedder:
@@ -21,7 +22,9 @@ class Embedder:
         encoded = self.tokenizer.encode_batch(texts)
         feed = {}
         if "input_ids" in self.input_names:
-            feed["input_ids"] = np.array([e.ids for e in encoded], dtype=np.int64)
+            feed["input_ids"] = np.array(
+                [e.ids for e in encoded], dtype=np.int64
+            )
         if "attention_mask" in self.input_names:
             feed["attention_mask"] = np.array(
                 [e.attention_mask for e in encoded], dtype=np.int64

@@ -20,8 +20,8 @@ from pydantic import BaseModel
 # which reads OPENAI_API_KEY immediately.
 load_dotenv()
 
+from cinevec.agent.movie_agent import MODEL, Deps, agent  # noqa: E402
 from cinevec.ingestion import orchestrate_ingestion  # noqa: E402
-from cinevec.agent.movie_agent import agent, Deps, MODEL  # noqa: E402
 from cinevec.ingestion.db.build_rag_db import get_engine  # noqa: E402
 from cinevec.ingestion.embed import get_embedder  # noqa: E402
 from cinevec.logging import logger  # noqa: E402
@@ -35,9 +35,19 @@ from cinevec.monitoring import (  # noqa: E402
 from cinevec.utils.file_utils import load_config_file  # noqa: E402
 
 REBUILD = os.getenv("REBUILD", "false").lower() == "true"
-SAMPLE_N = int(os.getenv("SAMPLE_N")) if os.getenv("SAMPLE_N") else None
+_sample_n = os.getenv("SAMPLE_N")
+SAMPLE_N = int(_sample_n) if _sample_n else None
 
 deps: Deps | None = None
+
+
+def get_deps() -> Deps:
+    """The agent and both endpoints need a populated Deps. It is None until
+    lifespan finishes, so fail with a clear 503 rather than an AttributeError
+    on a request that arrives during startup."""
+    if deps is None:
+        raise HTTPException(status_code=503, detail="Still starting up")
+    return deps
 
 
 @asynccontextmanager
@@ -84,7 +94,7 @@ class Answer(BaseModel):
 
 class FeedbackIn(BaseModel):
     conversation_id: int
-    score: Literal[1, -1]   # anything else is rejected before the handler runs
+    score: Literal[1, -1]  # anything else is rejected before the handler runs
 
 
 class FeedbackOut(BaseModel):
@@ -96,14 +106,16 @@ class FeedbackOut(BaseModel):
 def ask(payload: Question) -> Answer:
     """`def` not `async def`: run_sync blocks, and FastAPI runs sync endpoints
     in a worker thread so one request does not freeze the server."""
-    started = time.perf_counter()   # monotonic: a clock step cannot make this negative
-    result = agent.run_sync(payload.question, deps=deps)
+    ready = get_deps()
+    # monotonic: a clock step cannot make this negative
+    started = time.perf_counter()
+    result = agent.run_sync(payload.question, deps=ready)
     response_time = time.perf_counter() - started
 
     conversation_id = None
     try:
         record = build_record(payload.question, result, MODEL, response_time)
-        conversation_id = save_conversation(deps.engine, record)
+        conversation_id = save_conversation(ready.engine, record)
     except Exception:
         # Monitoring must never cost the user their answer.
         logger.exception("Failed to record conversation")
@@ -114,14 +126,15 @@ def ask(payload: Question) -> Answer:
 @app.post("/feedback", response_model=FeedbackOut)
 def feedback(payload: FeedbackIn) -> FeedbackOut:
     """Record a thumbs up (+1) or down (-1) against an earlier answer."""
-    if deps is None:
-        raise HTTPException(status_code=503, detail="Agent not ready")
-    if not conversation_exists(deps.engine, payload.conversation_id):
+    ready = get_deps()
+    if not conversation_exists(ready.engine, payload.conversation_id):
         raise HTTPException(
             status_code=404,
             detail=f"No conversation with id {payload.conversation_id}",
         )
-    feedback_id = save_feedback(deps.engine, payload.conversation_id, payload.score)
+    feedback_id = save_feedback(
+        ready.engine, payload.conversation_id, payload.score
+    )
     return FeedbackOut(status="ok", feedback_id=feedback_id)
 
 

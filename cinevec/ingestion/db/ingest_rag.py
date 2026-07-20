@@ -2,16 +2,17 @@
 Build the movie database from the TMDB-style dataframe.
 """
 
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
-from cinevec.ingestion.db.model_rag import Movie
+from box import ConfigBox
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from cinevec.logging import logger
-from cinevec.ingestion.embed import get_embedder
-from box import ConfigBox
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
-BATCH = 256 # embedding batch size 
+from cinevec.ingestion.db.model_rag import Movie
+from cinevec.ingestion.embed import get_embedder
+from cinevec.logging import logger
+
+BATCH = 256  # embedding batch size
 
 
 def ingest(engine: Engine, movies: list[dict], config: ConfigBox) -> bool:
@@ -36,8 +37,8 @@ def ingest(engine: Engine, movies: list[dict], config: ConfigBox) -> bool:
         # 3. Insert with a conflict guard as a race-condition safety net.
         with Session(engine) as session:
             for i in range(0, len(new), BATCH):
-                chunk = new[i:i + BATCH]
-                vecs = embedder.encode_batch(docs[i:i + BATCH])
+                chunk = new[i : i + BATCH]
+                vecs = embedder.encode_batch(docs[i : i + BATCH])
                 rows = [dict(x, embedding=vec) for x, vec in zip(chunk, vecs)]
                 session.execute(
                     insert(Movie)

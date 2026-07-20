@@ -4,7 +4,11 @@ from cinevec.monitoring.db import (
     save_conversation,
     save_feedback,
 )
-from cinevec.monitoring.metrics import ConversationRecord, build_record, compute_cost
+from cinevec.monitoring.metrics import (
+    ConversationRecord,
+    build_record,
+    compute_cost,
+)
 from cinevec.monitoring.models import Conversation, Feedback, MonitoringBase
 
 __all__ = [
