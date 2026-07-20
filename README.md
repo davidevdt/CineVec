@@ -1,3 +1,7 @@
+[![CI](https://github.com/davidevdt/CineVec/actions/workflows/ci.yml/badge.svg)](https://github.com/davidevdt/CineVec/actions/workflows/ci.yml)
+[![CD](https://github.com/davidevdt/CineVec/actions/workflows/cd.yml/badge.svg)](https://github.com/davidevdt/CineVec/actions/workflows/cd.yml)
+
+
 # CineVec
 ## An AI Agent for Movie Recommendations
 
