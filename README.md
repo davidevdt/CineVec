@@ -224,8 +224,27 @@ make format      # ruff format + ruff check --fix
 make check       # what CI runs: ruff format --check, ruff check, mypy
 ```
 
-CI runs those on every push and pull request. CD builds the image and pushes it
-to GitHub Container Registry on every push to `main`.
+CI runs those on every push and pull request
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+## Deployment
+
+CD builds the image and pushes it to GitHub Container Registry on every push to
+`main` ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)). It needs no
+secrets — Actions' own `GITHUB_TOKEN` is enough to publish to GHCR.
+
+The published image:
+**[ghcr.io/davidevdt/cinevec](https://github.com/davidevdt/CineVec/pkgs/container/cinevec)**
+
+```bash
+docker pull ghcr.io/davidevdt/cinevec:latest
+```
+
+Tagged `:latest` and `:<commit-sha>`, so you can pin a specific build.
+
+The image is the app only — it still needs Postgres and the environment
+variables from `.env`. `docker compose up` remains the way to run the whole
+stack locally; the published image is what a server would pull.
 
 ## Project structure
 
