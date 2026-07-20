@@ -2,8 +2,10 @@
 This module is based on the code in notebooks/data_download.ipynb, which was used to download and preprocess the TMDB-style dataset. 
 """
 
-import pandas as pd 
-import numpy as np 
+import ast
+
+import pandas as pd
+import numpy as np
 from typing import Optional
 from box import ConfigBox
 
@@ -41,7 +43,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     title=df.title.str.strip(),
     language=df.original_language.str.strip(),
     year=df.release_date.str.split('-').str[0].astype(int), 
-    genres=df.genre.str.split('|').apply(lambda x: [g.strip() for g in x] if isinstance(x, list) else []),
+    genres=df.genre.str.split(',').apply(lambda x: [g.strip() for g in x] if isinstance(x, list) else []),
     plot=df.overview.str.strip(),
     vote_count=df.vote_count.apply(lambda x: int(float(x))), 
     rating=df.vote_average.apply(lambda x: float(x) if pd.notnull(x) else None), 
@@ -71,7 +73,9 @@ def load_and_store_data(config: ConfigBox, sample_n: Optional[int] = None) -> pd
 
     if path_exists(output_path):
         logger.info(f"Data file already exists at {output_path}. Loading it instead of downloading.")
-        df_clean = pd.read_csv(output_path)
+        # genres is a list; read_csv would hand back its repr as a plain
+        # string, which reaches the text[] column as an array of characters.
+        df_clean = pd.read_csv(output_path, converters={"genres": ast.literal_eval})
         if sample_n and sample_n < len(df_clean):
             df_clean = df_clean.sample(n=sample_n, random_state=42, replace=False)
         return df_clean

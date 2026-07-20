@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  - name: CineVec Postgres
+    # Fixed uid so the dashboard JSON can reference it. Without this Grafana
+    # generates a random one and every panel reads "Datasource not found".
+    uid: cinevec-postgres
+    type: postgres
+    access: proxy
+    orgId: 1
+    # Compose service name, resolved on the project's default network.
+    url: db:5432
+    user: $POSTGRES_USER
+    database: $POSTGRES_DB
+    secureJsonData:
+      password: $POSTGRES_PASSWORD
+    jsonData:
+      sslmode: disable      # private compose network, no TLS terminator
+      postgresVersion: 1700
+    isDefault: true
+    editable: false

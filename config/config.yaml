@@ -3,7 +3,16 @@ data-df-path: "./data/top10K-TMDB-movies.csv"
 embedding-model: "Xenova/all-MiniLM-L6-v2"
 embedding-model-dir: "models"
 agent-max-results: 5
+text_search_title_weight: 1.0
+text_search_plot_weight: 0.4
+text_search_genres_weight: 0.2
 hybrid-search-n-candidates: 30
 rrf-k: 60
+
+# USD per 1M tokens. Defaults are gpt-5.4-mini list price; update if
+# MOVIE_AGENT_MODEL changes.
+monitoring:
+  input-cost-per-million: 0.375
+  output-cost-per-million: 2.25
 
 

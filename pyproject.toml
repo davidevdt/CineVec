@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "fastapi>=0.139.2",
     "huggingface-hub>=1.22.0",
     "jupyter>=1.1.1",
     "matplotlib>=3.11.0",
@@ -19,4 +20,5 @@ dependencies = [
     "seaborn>=0.13.2",
     "sqlalchemy>=2.0.51",
     "tokenizers>=0.23.1",
+    "uvicorn[standard]>=0.51.0",
 ]

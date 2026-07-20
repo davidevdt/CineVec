@@ -10,6 +10,8 @@ def get_embedder(config: ConfigBox) -> Embedder:
     model_name = config.embedding_model
     full_model_path = f"{model_dir}/{model_name}"
 
-    if not path_exists(model_dir):
+    # The model's own folder, not the parent: the parent exists while the model
+    # is missing under a mounted volume, or after changing embedding-model.
+    if not path_exists(full_model_path):
         download_embedding_model(model_name, dest=model_dir)
     return Embedder(path=full_model_path)

@@ -1,0 +1,66 @@
+#   docker compose up --build     start both (first run downloads + embeds)
+#   docker compose down           stop both, keeping the data
+#   docker compose down -v        stop both and delete the data
+
+services:
+
+  db:
+    image: pgvector/pgvector:pg17
+    env_file: .env
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    ports:
+      # POSTGRES_HOST_PORT=5433 if the Makefile's pgvector container already
+      # holds 5432 on the host.
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    # The app's startup ingestion fails on connection refused if it starts first.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      # Overrides .env: inside the network the database is "db", and localhost
+      # would mean the app container itself.
+      POSTGRES_HOST: db
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - movie_data:/app/data
+      - movie_models:/app/models
+
+  grafana:
+    # Pinned: the dashboard JSON's schemaVersion tracks the Grafana release.
+    image: grafana/grafana:11.6.0
+    ports:
+      - "${GRAFANA_HOST_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Interpolated into provisioning/datasources/datasource.yml at startup.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-movies}
+    volumes:
+      # Dashboards live in /etc/grafana, not /var/lib/grafana, so this bind
+      # mount does not nest inside the grafana_data volume below.
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgvector_data:
+  movie_data:
+  movie_models:
+  grafana_data:

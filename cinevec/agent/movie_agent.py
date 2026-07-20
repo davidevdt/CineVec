@@ -27,6 +27,14 @@ MAX_RESULTS = 5
 MAX_RESULTS = config.agent_max_results
 HYBRID_SEARCH_N_CANDIDATES = config.hybrid_search_n_candidates
 RRF_K = config.rrf_k
+TITLE_WEIGHT = config.text_search_title_weight
+PLOT_WEIGHT = config.text_search_plot_weight
+GENRES_WEIGHT = config.text_search_genres_weight
+TEXT_SEARCH_WEIGHTS = {
+    "title": TITLE_WEIGHT, 
+    "plot": PLOT_WEIGHT, 
+    "genres": GENRES_WEIGHT
+}
 
 
 def clamp(limit: int) -> int:
@@ -36,10 +44,10 @@ def clamp(limit: int) -> int:
 @dataclass
 class Deps:
     engine: object
-    embed: object
+    embedder: object
 
 
-agent = Agent(MODEL, deps_type=Deps, system_prompt=SYSTEM_PROMPT % (MAX_RESULTS,) * 3)
+agent = Agent(MODEL, deps_type=Deps, system_prompt=SYSTEM_PROMPT % ((MAX_RESULTS,) * 3))
 
 
 @agent.tool
@@ -61,10 +69,10 @@ def get_movie_details(ctx: RunContext[Deps], title: str) -> dict | str:
 def find_similar_movies(
     ctx: RunContext[Deps],
     title: str,
+    year_min: Optional[int],
+    year_max: Optional[int],
     genre: Optional[str] = None,
     language: Optional[str] = None,
-    year_min: Optional[int] = None,
-    year_max: Optional[int] = None,
     rating_min: Optional[float] = None,
     rating_max: Optional[float] = None,
     min_votes: Optional[int] = None,
@@ -73,7 +81,10 @@ def find_similar_movies(
     """Find movies whose plot/theme is most similar to a given movie already
     in the database, by comparing stored embeddings. The reference movie is
     excluded from results. Optional structured filters narrow the candidates
-    (language is an ISO 639-1 code like 'en' or 'fr')."""
+    (language is an ISO 639-1 code like 'en' or 'fr'). For era constraints
+    relative to the reference movie, pass explicit year_min/year_max. These
+    two are required: pass null for both only if the user gave no era
+    constraint at all."""
     return search.similar_search(
         ctx.deps.engine, title, limit=clamp(limit), genre=genre,
         language=language, year_min=year_min, year_max=year_max,
@@ -113,16 +124,16 @@ def search_movies(
     if not query:
         return [{"error": "query is required for text/vector/hybrid mode"}]
     if mode == "text":
-        return search.text_search(ctx.deps.engine, query, limit=limit, **filters)
+        return search.text_search(ctx.deps.engine, query, limit=limit, weights=TEXT_SEARCH_WEIGHTS, **filters)
     if mode == "vector":
-        return search.vector_search(ctx.deps.engine, ctx.deps.embed, query,
+        return search.vector_search(ctx.deps.engine, ctx.deps.embedder, query,
                                     limit=limit, **filters)
-    return search.hybrid_search(ctx.deps.engine, ctx.deps.embed, query,
+    return search.hybrid_search(ctx.deps.engine, ctx.deps.embedder, query, weights=TEXT_SEARCH_WEIGHTS, 
                                 limit=limit, rrf_k=RRF_K, n_candidates=HYBRID_SEARCH_N_CANDIDATES, **filters)
 
 
 def main():
-    deps = Deps(engine=get_engine(), embed=get_embedder())
+    deps = Deps(engine=get_engine(), embedder=get_embedder(config=config))
 
     if len(sys.argv) > 1:
         result = agent.run_sync(" ".join(sys.argv[1:]), deps=deps)

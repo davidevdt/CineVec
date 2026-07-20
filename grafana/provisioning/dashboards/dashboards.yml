@@ -1,0 +1,14 @@
+apiVersion: 1
+
+providers:
+  - name: CineVec
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    # Edit grafana/dashboards/cinevec.json and it reloads without a restart.
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

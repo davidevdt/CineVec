@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CineVec — movie recommendations</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171a23;
+    --border: #262b38;
+    --text: #e8eaf0;
+    --muted: #9aa3b8;
+    --accent: #f5a524;
+    --accent-text: #1a1205;
+    --error: #ff6b6b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fa;
+      --panel: #ffffff;
+      --border: #e2e5ec;
+      --text: #1a1d26;
+      --muted: #666e82;
+      --accent: #e0900c;
+      --accent-text: #ffffff;
+      --error: #c0392b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 48px 20px 80px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .page { max-width: 720px; margin: 0 auto; }
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 30px;
+    letter-spacing: -0.4px;
+  }
+  h1 .dot { color: var(--accent); }
+  .tagline { margin: 0 0 28px; color: var(--muted); }
+
+  textarea {
+    width: 100%;
+    min-height: 92px;
+    padding: 14px 16px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+  }
+  button {
+    padding: 11px 22px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font: 600 15px/1 inherit;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled { opacity: 0.55; cursor: default; }
+  .hint { color: var(--muted); font-size: 13px; }
+
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 0 0;
+  }
+  .chip {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 400;
+  }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+
+  #answer {
+    margin-top: 28px;
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel);
+  }
+  #answer:empty { display: none; }
+  #answer p { margin: 0 0 12px; }
+  #answer ol, #answer ul { margin: 0 0 12px; padding-left: 22px; }
+  #answer li { margin-bottom: 10px; }
+  #answer strong { color: var(--accent); }
+  #answer .detail { color: var(--muted); font-size: 15px; }
+  #answer .error { color: var(--error); }
+
+  #feedback { margin-top: 14px; }
+  .vote { font-size: 16px; line-height: 1; padding: 6px 14px; }
+  .vote.chosen { border-color: var(--accent); color: var(--accent); }
+  .vote:disabled { opacity: 0.5; cursor: default; }
+
+  .thinking { color: var(--muted); }
+  .thinking::after {
+    content: "";
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%   { content: ""; }
+    25%  { content: "."; }
+    50%  { content: ".."; }
+    75%  { content: "..."; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>CineVec<span class="dot">.</span></h1>
+  <p class="tagline">Ask for a film in your own words — plot, mood, era, whatever fits.</p>
+
+  <textarea id="question" placeholder="I feel like a movie like Toy Story, and from the same decade. What can you recommend?"></textarea>
+
+  <div class="row">
+    <button id="ask">Ask</button>
+    <span class="hint">or press Ctrl + Enter</span>
+  </div>
+
+  <div class="examples">
+    <button class="chip">Movies like Aladdin from the 90s</button>
+    <button class="chip">Best rated dramas of the 1990s</button>
+    <button class="chip">A slow, dreamlike sci-fi about memory</button>
+    <button class="chip">French comedies rated above 7</button>
+  </div>
+
+  <div id="answer"></div>
+
+  <!-- Sibling of #answer, not inside it: #answer:empty must stay empty. -->
+  <div id="feedback" class="row" hidden>
+    <span class="hint">Was this helpful?</span>
+    <button class="chip vote" data-score="1" title="Yes">&#128077;</button>
+    <button class="chip vote" data-score="-1" title="No">&#128078;</button>
+    <span class="hint" id="feedback-thanks" hidden>Thanks for the feedback.</span>
+  </div>
+
+</div>
+
+<script>
+  const questionBox    = document.getElementById("question");
+  const askButton      = document.getElementById("ask");
+  const answerBox      = document.getElementById("answer");
+  const feedbackBox    = document.getElementById("feedback");
+  const feedbackThanks = document.getElementById("feedback-thanks");
+  const voteButtons    = document.querySelectorAll(".vote");
+
+  let conversationId = null;
+
+  // ".examples .chip", not ".chip": the vote buttons are chips too, and this
+  // would otherwise overwrite their click handlers.
+  document.querySelectorAll(".examples .chip").forEach(chip => {
+    chip.onclick = () => { questionBox.value = chip.textContent; ask(); };
+  });
+
+  voteButtons.forEach(button => {
+    button.onclick = () => sendFeedback(button, Number(button.dataset.score));
+  });
+
+  askButton.onclick = ask;
+  questionBox.addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask();
+  });
+
+  async function ask() {
+    const question = questionBox.value.trim();
+    if (!question) return;
+
+    askButton.disabled = true;
+    answerBox.innerHTML = '<p class="thinking">Searching the database</p>';
+    resetFeedback();
+
+    try {
+      const response = await fetch("/ask", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({question: question}),
+      });
+      if (!response.ok) throw new Error("Server replied " + response.status);
+      const data = await response.json();
+      answerBox.innerHTML = renderMarkdown(data.answer);
+
+      conversationId = data.conversation_id;
+      if (conversationId !== null && conversationId !== undefined) {
+        feedbackBox.hidden = false;
+      }
+    } catch (err) {
+      answerBox.innerHTML = '<p class="error">' + escapeHtml(err.message) + "</p>";
+    } finally {
+      askButton.disabled = false;
+    }
+  }
+
+  function resetFeedback() {
+    conversationId = null;
+    feedbackBox.hidden = true;
+    feedbackThanks.hidden = true;
+    feedbackThanks.textContent = "Thanks for the feedback.";
+    voteButtons.forEach(b => { b.disabled = false; b.classList.remove("chosen"); });
+  }
+
+  async function sendFeedback(button, score) {
+    if (conversationId === null) return;
+
+    // Disable both at once so a double click cannot vote twice.
+    voteButtons.forEach(b => b.disabled = true);
+    button.classList.add("chosen");
+
+    try {
+      const response = await fetch("/feedback", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({conversation_id: conversationId, score: score}),
+      });
+      if (!response.ok) throw new Error("Server replied " + response.status);
+      feedbackThanks.hidden = false;
+    } catch (err) {
+      // Re-enable rather than losing the vote silently.
+      button.classList.remove("chosen");
+      voteButtons.forEach(b => b.disabled = false);
+      feedbackThanks.textContent = "Could not save that vote.";
+      feedbackThanks.hidden = false;
+    }
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Italic text may not contain "<", so it cannot match across a tag inserted
+  // by the bold pass and produce crossed tags.
+  function inline(line) {
+    return line
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(?<!\*)\*(?!\*)([^*<]+?)\*/g, "<em>$1</em>")
+      .replace(/\*/g, "");
+  }
+
+  // The agent writes each movie as a numbered item with indented detail lines
+  // underneath, so an indented line continues the item above instead of
+  // starting a new list (which would restart the numbering at 1 each time).
+  function renderMarkdown(text) {
+    const lines = escapeHtml(text).split("\n");
+    let html = "", listTag = null, inItem = false;
+
+    const closeItem = () => { if (inItem) { html += "</li>"; inItem = false; } };
+    const closeList = () => { closeItem(); if (listTag) { html += `</${listTag}>`; listTag = null; } };
+    const openList  = tag => { if (listTag !== tag) { closeList(); html += `<${tag}>`; listTag = tag; } };
+
+    for (const raw of lines) {
+      const indented = /^\s/.test(raw);
+      const line = inline(raw.trim());
+
+      if (!line) continue;  // a blank line must not break a list
+
+      const numbered = line.match(/^\d+\.\s+(.*)$/);
+      const bulleted = line.match(/^[-•]\s+(.*)$/);
+
+      if (numbered && !indented) {
+        openList("ol"); closeItem(); html += `<li>${numbered[1]}`; inItem = true;
+      } else if (bulleted && !indented) {
+        openList("ul"); closeItem(); html += `<li>${bulleted[1]}`; inItem = true;
+      } else if (inItem) {
+        html += `<br><span class="detail">${bulleted ? bulleted[1] : line}</span>`;
+      } else {
+        closeList(); html += `<p>${line}</p>`;
+      }
+    }
+    closeList();
+    return html;
+  }
+</script>
+</body>
+</html>

@@ -1,11 +1,32 @@
-create-pgvector-db:
-	docker run -d \
-		--name pgvector \
-		--env-file .env \
-		-v pgvector_data:/var/lib/postgresql/data \
-		-p 5432:5432 \
-		pgvector/pgvector:pg17
+# Start the stack and follow the app log, so ingestion progress is visible.
+up:
+	docker compose up -d
+	docker compose logs -f app
 
-stop-pgvector-db:
-	docker stop pgvector
-	docker rm pgvector
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f app
+
+# Force the next start to re-download the dataset CSV.
+reset-csv:
+	docker compose exec app rm -f /app/data/top10K-TMDB-movies.csv
+
+grafana:
+	@echo "Grafana: http://localhost:$${GRAFANA_HOST_PORT:-3000}"
+	docker compose logs -f grafana
+
+# The last 10 recorded questions.
+monitoring-tail:
+	docker compose exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c \
+	  "SELECT id, left(question, 40) AS question, total_tokens, \
+	   round(cost::numeric, 5) AS cost, tools_used, timestamp \
+	   FROM conversations ORDER BY id DESC LIMIT 10;"
+
+# Wipe monitoring history. The movies table is untouched.
+reset-monitoring:
+	docker compose exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c \
+	  "TRUNCATE feedback, conversations RESTART IDENTITY;"
+
+.PHONY: up down logs reset-csv grafana monitoring-tail reset-monitoring

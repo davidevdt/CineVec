@@ -1,0 +1,16 @@
+.venv/
+.git/
+.gitignore
+
+# Downloaded at runtime into volumes.
+data/
+models/
+
+# Passed in by docker-compose at run time.
+.env
+
+notebooks/
+__pycache__/
+*.pyc
+Dockerfile
+docker-compose.yml

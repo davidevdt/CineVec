@@ -1,6 +1,6 @@
 import argparse
 from cinevec.ingestion import orchestrate_ingestion
-
+from cinevec.agent.movie_agent import main as agent_main
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -16,3 +16,5 @@ if __name__ == "__main__":
     args = parser.parse_args() 
 
     orchestrate_ingestion(rebuild=args.rebuild, sample_n=args.sample_n)
+
+    agent_main()

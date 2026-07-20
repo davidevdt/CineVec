@@ -13,20 +13,16 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.dialects.postgresql import ARRAY, REAL 
 
 from cinevec.ingestion.db.model_rag import Movie, EMBED_DIM
-from cinevec.ingestion.embed import get_embedder
+from cinevec.ingestion.embed.embedder import Embedder
 
 
-# Text-search fields default weights (tunable)
-# from model's search doc labels: A=title; B=plot; C=genres; (D available but unused)
-DEFAULT_WEIGHTS = {"title": 1.0, "plot": 0.4, "genres": 0.2}
-
-# Embedder
-embed = get_embedder()
+# ts_rank's own A,B,C defaults; D stays 0.0, no label is assigned to it.
+_DEFAULT_WEIGHTS = {"title": 1.0, "plot": 0.4, "genres": 0.2}
 
 
-def _weight_array(weights: Optional[dict] = None) -> list[float]: 
+def _weight_array(weights: Optional[dict] = None) -> list[float]:
     """text-search rank requires weights in D,C,B,A order."""
-    w = {**DEFAULT_WEIGHTS, **(weights or {})}
+    w = {**_DEFAULT_WEIGHTS, **(weights or {})}
     return [0.0, w["genres"], w["plot"], w["title"]]
 
 
@@ -125,11 +121,12 @@ def text_search(
 # ---------------------------------------------------------------- 3. Vector Search
 def vector_search(
     engine: Engine, 
+    embedder: Embedder, 
     query: str, 
     limit: int=10, 
     **filters
 ) -> list[dict]:
-    distance = Movie.embedding.cosine_distance(embed.encode(query)).label("score")
+    distance = Movie.embedding.cosine_distance(embedder.encode(query)).label("score")
     stmt = (
         _apply_filters(select(*COLS, distance), **filters)
         .where(Movie.embedding.is_not(None))
@@ -142,32 +139,33 @@ def vector_search(
 
 # ---------------------------------------------------------------- 4. Similar
 def similar_search(
-    engine: Engine, 
-    title: str, 
-    limit: int=10, 
+    engine: Engine,
+    title: str,
+    limit: int=10,
     **filters
-) -> dict: 
+) -> dict:
     """Nearest neighbors of a movie's own stored embedding."""
-    with Session(engine) as s: 
+    with Session(engine) as s:
         # Resolve a fuzzy title to one movie
         ref = s.execute(
             select(Movie.id, Movie.title)
             .where(Movie.title.ilike(f"%{title}%"))
             .order_by(func.length(Movie.title))
             .limit(1)
-        ).first() 
-    if ref is None: 
+        ).first()
+    if ref is None:
         return {"error": f"No movie found matching '{title}'."}
-    
-    ref_vec = {
+
+    ref_vec = (
         select(Movie.embedding)
-        .where(Movie.id == ref.id) 
+        .where(Movie.id == ref.id)
         .scalar_subquery()
-    }
+    )
     distance = Movie.embedding.cosine_distance(ref_vec).label("score")
     stmt = (
         _apply_filters(select(*COLS, distance), **filters)
         .where(Movie.id != ref.id, Movie.embedding.is_not(None))
+        .order_by(distance)
         .limit(limit)
     )
     return {"reference": ref.title, "results": _run(engine, stmt)}
@@ -187,6 +185,7 @@ _HYBRID_FILTERS = {
 
 def hybrid_search(
     engine: Engine, 
+    embedder: Embedder, 
     query: str, 
     limit: int=10, 
     weights: Optional[dict]=None,
@@ -207,7 +206,7 @@ def hybrid_search(
             params[k] = v.lower()
         else:
             params[k] = v
-    params |= {"q": query, "qvec": embed.encode(query), "weights": _weight_array(weights),
+    params |= {"q": query, "qvec": embedder.encode(query), "weights": _weight_array(weights),
                "norm": norm, "k": rrf_k, "pool": n_candidates, "limit": limit}
 
     stmt = text(f"""
